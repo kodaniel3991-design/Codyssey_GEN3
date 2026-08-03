@@ -1,0 +1,884 @@
+<meta charset="utf-8">
+<title>프로젝트 1 — 자동화 도구 비교 분석</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --canvas:#F6F7F9; --ink:#12151A; --ink2:#3A424F; --muted:#6B7484;
+  --line:#D4DAE3; --line2:#E8ECF1;
+  --make:#6D00CC; --zap:#FF4F00;
+  --make-soft:#F4ECFC; --zap-soft:#FFF0E9;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#20242C;overflow:hidden}
+body{font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:var(--ink);
+  display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+#viewport{width:1280px;height:720px;transform-origin:center center;position:relative}
+
+.slide{position:absolute;inset:0;background:var(--canvas);
+  background-image:radial-gradient(var(--line2) 1.1px, transparent 1.1px);background-size:22px 22px;
+  padding:48px 62px 54px;display:none;flex-direction:column;overflow:hidden}
+.slide.on{display:flex;animation:in .32s ease both}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.slide.on{animation:none}}
+
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:.16em;
+  color:var(--muted);text-transform:uppercase;display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.eyebrow::before{content:"";width:22px;height:1px;background:var(--line);flex:none}
+h1{font-size:52px;font-weight:700;letter-spacing:-.035em;line-height:1.16}
+h2{font-size:32px;font-weight:700;letter-spacing:-.03em;line-height:1.22;margin-bottom:6px}
+h2 .star{color:var(--zap);font-size:21px;vertical-align:super;margin-left:4px}
+.sub{font-size:15px;color:var(--muted);font-weight:400;line-height:1.6;margin-bottom:18px;max-width:980px}
+p{font-size:15px;line-height:1.72;color:var(--ink2)}
+b,strong{font-weight:600;color:var(--ink)}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:.92em}
+.body-grow{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+
+.split{display:grid;grid-template-columns:1fr 1px 1fr;flex:1;min-height:0}
+.seam{background:var(--line);position:relative}
+.seam::before{content:"";position:absolute;top:-5px;left:50%;transform:translateX(-50%) rotate(45deg);
+  width:10px;height:10px;background:var(--canvas);border:1.5px solid var(--muted)}
+.side{padding:2px 30px;display:flex;flex-direction:column;min-height:0}
+.side:first-of-type{padding-left:0}
+.split > .side:last-child{padding-right:0}
+.tool{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.14em;
+  display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.tool::before{content:"";width:9px;height:9px;border-radius:50%;flex:none}
+.tool.make{color:var(--make)} .tool.make::before{background:var(--make)}
+.tool.zap{color:var(--zap)} .tool.zap::before{background:var(--zap)}
+.tool.n{color:var(--muted)} .tool.n::before{background:var(--muted)}
+
+.flow{font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.5;color:var(--ink2)}
+.node{display:inline-block;padding:6px 10px;border:1.5px solid var(--line);background:#fff;
+  border-radius:3px;margin:2px 0;font-size:11.5px}
+.node.m{border-color:var(--make);color:var(--make);background:var(--make-soft)}
+.node.z{border-color:var(--zap);color:var(--zap);background:var(--zap-soft)}
+.branch{padding-left:14px;border-left:1.5px solid var(--line);margin:5px 0 5px 10px}
+.branch > div{margin:6px 0}
+.arrow{color:var(--muted);font-size:11px;margin:2px 0 2px 10px}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--line2);vertical-align:top;line-height:1.5}
+thead th{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);font-weight:500;border-bottom:1.5px solid var(--line);padding-bottom:7px}
+th.c-make{color:var(--make)} th.c-zap{color:var(--zap)}
+td:first-child{font-weight:500;color:var(--ink)}
+tr:last-child td{border-bottom:none}
+.win-m{color:var(--make);font-weight:600}
+.win-z{color:var(--zap);font-weight:600}
+.win-n{color:var(--muted)}
+.bad{color:var(--zap);font-weight:600}
+
+.note{border-left:2.5px solid var(--ink);padding:11px 0 11px 15px;margin-top:auto;
+  font-size:14px;line-height:1.65;color:var(--ink2)}
+.note .lbl{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.13em;
+  color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase}
+.note.warn{border-left-color:var(--zap)} .note.warn .lbl{color:var(--zap)}
+
+.shots{display:grid;gap:16px;flex:1;min-height:0;margin-top:2px}
+.shots.two{grid-template-columns:1fr 1fr}
+.shot{display:flex;flex-direction:column;min-height:0}
+.shot .frame{flex:1;min-height:0;border:1px solid var(--line);background:#fff;border-radius:4px;
+  overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}
+.shot img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.shot.missing .frame{border:1.5px dashed var(--line);
+  background:repeating-linear-gradient(-45deg,#fff,#fff 9px,#FAFBFC 9px,#FAFBFC 18px)}
+.shot.missing img{display:none}
+.shot.missing .frame::after{content:"img/" attr(data-file);font-family:'IBM Plex Mono',monospace;
+  font-size:11.5px;color:var(--muted);padding:0 16px;text-align:center;line-height:1.6}
+.shot figcaption{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);margin-top:7px}
+.shot.m figcaption{color:var(--make)}
+.shot.z figcaption{color:var(--zap)}
+
+.cover{justify-content:center;padding:0 62px}
+.cover-seam{display:grid;grid-template-columns:1fr 1px 1fr;align-items:center;margin:36px 0 32px}
+.cover-seam .seam{height:118px}
+.cover-tool{text-align:center;font-family:'IBM Plex Mono',monospace;letter-spacing:.2em;font-size:15px;font-weight:600}
+.cover-tool small{display:block;font-family:'IBM Plex Sans KR';font-size:12px;letter-spacing:0;
+  font-weight:400;color:var(--muted);margin-top:8px}
+.meta{display:flex;gap:32px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:.05em}
+
+.thesis{font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1.42;max-width:1000px}
+.thesis .m{color:var(--make)} .thesis .z{color:var(--zap)}
+
+.items{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 28px;font-size:14px}
+.items.one{grid-template-columns:1fr}
+.item{display:flex;gap:12px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line2)}
+.item .n{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);flex:none;width:24px}
+.item .t{font-weight:400;color:var(--ink2)}
+.item .t b{font-weight:600}
+.item .d{color:var(--muted);font-size:12.5px;margin-left:auto;flex:none}
+.item.key .n{color:var(--zap);font-weight:600}
+
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;flex:1;min-height:0}
+.card{border:1px solid var(--line);background:#fff;border-radius:5px;padding:16px 18px;display:flex;flex-direction:column}
+.card h3{font-size:15px;font-weight:600;margin-bottom:8px}
+.card p{font-size:13px;line-height:1.6}
+
+.rail{position:absolute;left:62px;right:62px;bottom:20px;display:flex;align-items:center;gap:14px;
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);letter-spacing:.1em}
+.rail .track{flex:1;height:1px;background:var(--line2);position:relative}
+.rail .fill{position:absolute;left:0;top:0;height:1px;background:var(--ink)}
+.nav{position:fixed;bottom:14px;right:18px;display:flex;gap:6px;z-index:20}
+.nav button{width:30px;height:30px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);
+  color:#fff;border-radius:4px;cursor:pointer;font-size:13px;line-height:1}
+.nav button:hover{background:rgba(255,255,255,.16)}
+.nav button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.hint{position:fixed;bottom:18px;left:18px;color:rgba(255,255,255,.4);
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;z-index:20}
+</style>
+
+<div id="viewport">
+
+<!-- 01 표지 -->
+<section class="slide cover on">
+  <div class="eyebrow">프로젝트 1 · 자동화 도구 비교 구현</div>
+  <h1>같은 워크플로우,<br>두 도구.</h1>
+  <div class="cover-seam">
+    <div class="cover-tool" style="color:var(--make)">MAKE<small>Router + 필터</small></div>
+    <div class="seam"></div>
+    <div class="cover-tool" style="color:var(--zap)">ZAPIER<small>Paths</small></div>
+  </div>
+  <div class="meta"><span>노코드 자동화 기초</span><span>이대흥</span><span>2026.08.03</span></div>
+</section>
+
+<!-- 02 목적 -->
+<section class="slide">
+  <div class="eyebrow">01 — 비교의 목적</div>
+  <h2>어느 쪽이 더 좋은가를 묻지 않는다</h2>
+  <p class="sub">두 도구는 같은 일을 한다. 다른 건 <b>사용자에게 무엇을 요구하고, 대신 무엇을 돌려주는가</b>다.</p>
+  <div class="body-grow">
+    <div class="items one">
+      <div class="item"><span class="n">01</span><span class="t">비교 항목은 리뷰 글이 아니라 <b>구현 중 마찰이 발생한 지점</b>에서 도출했다</span></div>
+      <div class="item"><span class="n">02</span><span class="t">마찰이 없었던 항목도 <b>"차이가 없었다"는 사실 그대로</b> 기록했다</span></div>
+      <div class="item"><span class="n">03</span><span class="t">구현 중 발생한 <b>오류와 사고를 지우지 않고</b> 근거로 삼았다</span></div>
+      <div class="item"><span class="n">04</span><span class="t">직접 확인하지 않은 기능은 <b>서술에서 제외</b>했다</span></div>
+    </div>
+  </div>
+  <div class="note"><span class="lbl">검증 기준</span>
+    2026년 8월 3일 두 도구를 직접 구현하며 관찰한 내용만 담았다. 문서 스펙만 보고 채운 항목은 없다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>비교의 목적</span></div>
+</section>
+
+<!-- 03 공통 사양 -->
+<section class="slide">
+  <div class="eyebrow">02 — 구현한 워크플로우</div>
+  <h2>NUON 도입 문의 접수 처리</h2>
+  <p class="sub">문의가 들어오면 유형에 따라 다른 시트에 기록하고, 담당자에게 알림 메일을 보낸다.</p>
+  <div class="body-grow">
+    <table>
+      <thead><tr><th style="width:130px">구성</th><th>내용</th><th style="width:140px">요건</th></tr></thead>
+      <tbody>
+        <tr><td>Trigger</td><td>Google Forms 응답 제출 — 응답 시트에 신규 행 추가</td><td class="mono">1개 이상 ✓</td></tr>
+        <tr><td>조건 분기</td><td>폼의 <span class="mono">문의 유형</span> 필드 값으로 2갈래</td><td class="mono">1개 이상 ✓</td></tr>
+        <tr><td>Action 1·2</td><td><span class="mono">솔루션 도입 상담</span> → <b>도입상담</b> 탭 기록 → 알림 메일 발송</td><td class="mono" rowspan="2">2개 이상 ✓<br><b>실제 4개</b></td></tr>
+        <tr><td>Action 3·4</td><td><span class="mono">단순 문의</span> → <b>일반문의</b> 탭 기록 → 알림 메일 발송</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><span class="lbl">공통 자산</span>
+    폼 <span class="mono">NUON 도입 문의(자동화 테스트용)</span> · 응답시트 <span class="mono">설문지 응답 시트1</span> · 결과시트 <span class="mono">NUON_문의처리_결과</span>(탭 2개)<br>
+    두 도구 모두 동일 소스·동일 구조로 구현했고, 각 분기 경로를 1회 이상 실제로 실행했다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>공통 사양</span></div>
+</section>
+
+<!-- 04 Make 구조 -->
+<section class="slide">
+  <div class="eyebrow">03 — 도구별 구현 구조</div>
+  <h2>Make — <span class="mono" style="font-size:23px;color:var(--make)">P1_문의접수_Make</span></h2>
+  <p class="sub">Router를 놓고 <b>경로마다 필터 조건을 따로 건다.</b> 경로가 먼저 있고 조건이 나중에 붙는다.</p>
+  <div class="split">
+    <div class="side">
+      <div class="tool make">STRUCTURE</div>
+      <div class="flow">
+        <div><span class="node m">2. Watch New Rows</span></div>
+        <div class="arrow">↓</div>
+        <div><span class="node m">4. Router</span></div>
+        <div class="branch">
+          <div><span class="mono" style="color:var(--muted)">필터 ▸ 도입상담</span><br>
+            <span class="arrow">↳</span> <span class="node">5. Add a Row</span> → <span class="node">7. Send an email</span></div>
+          <div><span class="mono" style="color:var(--muted)">필터 ▸ 단순문의</span><br>
+            <span class="arrow">↳</span> <span class="node">6. Add a Row</span> → <span class="node">8. Send an email</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="seam"></div>
+    <div class="side">
+      <div class="tool make">증빙</div>
+      <figure class="shot m" style="flex:1">
+        <div class="frame" data-file="M01_시나리오_전체구성.png">
+          <img src="img/M01_시나리오_전체구성.png" alt="Make 시나리오 전체 구성" onerror="this.closest('.shot').classList.add('missing')"></div>
+        <figcaption>M01 · 시나리오 전체 캔버스</figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>Make 구조</span></div>
+</section>
+
+<!-- 05 Make 설정 -->
+<section class="slide">
+  <div class="eyebrow">03 — 도구별 구현 구조</div>
+  <h2>Make — 트리거와 기록 모듈 설정</h2>
+  <p class="sub">응답 시트를 소스로 지정하고, 결과 시트의 각 열에 값을 꽂는다. 두 화면 모두 <b>사용자가 시트 구조를 직접 지정</b>한다.</p>
+  <div class="shots two" style="flex:1">
+    <figure class="shot m">
+      <div class="frame" data-file="M00_트리거_설정.png">
+        <img src="img/M00_트리거_설정.png" alt="Make 트리거 설정" onerror="this.closest('.shot').classList.add('missing')"></div>
+      <figcaption>M00 · 트리거 — 헤더 범위 A1:G1 수동 입력</figcaption>
+    </figure>
+    <figure class="shot m">
+      <div class="frame" data-file="M02_시트기록_모듈설정.png">
+        <img src="img/M02_시트기록_모듈설정.png" alt="Make 시트 기록 모듈 설정" onerror="this.closest('.shot').classList.add('missing')"></div>
+      <figcaption>M02 · 기록 모듈 — 열 헤더 ID 사용 No</figcaption>
+    </figure>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>Make 설정</span></div>
+</section>
+
+<!-- 06 Zapier 구조 -->
+<section class="slide">
+  <div class="eyebrow">03 — 도구별 구현 구조</div>
+  <h2>Zapier — <span class="mono" style="font-size:23px;color:var(--zap)">P1_문의접수_Zapier</span></h2>
+  <p class="sub">Paths는 <b>조건과 액션이 하나의 경로 블록 안에 묶여</b> 있다. 경로를 만들면 조건 입력란이 이미 그 안에 있다.</p>
+  <div class="split">
+    <div class="side">
+      <div class="tool zap">STRUCTURE</div>
+      <div class="flow">
+        <div><span class="node z">1. New Spreadsheet Row</span></div>
+        <div class="arrow">↓</div>
+        <div><span class="node z">2. Split into paths</span></div>
+        <div class="branch">
+          <div><span class="node">도입상담</span> <span class="mono" style="color:var(--muted)">3. Path conditions</span><br>
+            <span class="arrow">↳</span> <span class="node">4. Create Row</span> → <span class="node">5. Send Email</span></div>
+          <div><span class="node">단순문의</span> <span class="mono" style="color:var(--muted)">6. Path conditions</span><br>
+            <span class="arrow">↳</span> <span class="node">7. Create Row</span> → <span class="node">8. Send Email</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="seam"></div>
+    <div class="side">
+      <div class="tool zap">증빙</div>
+      <figure class="shot z" style="flex:1">
+        <div class="frame" data-file="Z06_Zap_전체구성.png">
+          <img src="img/Z06_Zap_전체구성.png" alt="Zapier Zap 전체 구성" onerror="this.closest('.shot').classList.add('missing')"></div>
+        <figcaption>Z06 · Publish 완료 후 전체 스텝</figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>Zapier 구조</span></div>
+</section>
+
+<!-- 07 Zapier 설정 -->
+<section class="slide">
+  <div class="eyebrow">03 — 도구별 구현 구조</div>
+  <h2>Zapier — 트리거와 경로 조건 설정</h2>
+  <p class="sub">같은 응답 시트를 소스로 지정했다. 조건은 <span class="mono">Custom rules</span> 안에서 필드·연산자·값을 고른다.</p>
+  <div class="shots two" style="flex:1">
+    <figure class="shot z">
+      <div class="frame" data-file="Z02_트리거_설정.png">
+        <img src="img/Z02_트리거_설정.png" alt="Zapier 트리거 설정" onerror="this.closest('.shot').classList.add('missing')"></div>
+      <figcaption>Z02 · 트리거 — 시트 선택만으로 헤더 자동 인식</figcaption>
+    </figure>
+    <figure class="shot z">
+      <div class="frame" data-file="Z04_Paths_조건설정.png">
+        <img src="img/Z04_Paths_조건설정.png" alt="Zapier Paths 조건 설정" onerror="this.closest('.shot').classList.add('missing')"></div>
+      <figcaption>Z04 · 조건 — 문의 유형 Exactly matches</figcaption>
+    </figure>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>Zapier 설정</span></div>
+</section>
+
+<!-- 08 구현 과정 요약 -->
+<section class="slide">
+  <div class="eyebrow">04 — 구현 과정 요약</div>
+  <h2>Make로 먼저 만들고, Zapier로 재현했다</h2>
+  <p class="sub">Make를 기준 구현으로 삼고 동일 구조를 Zapier로 옮겼다. 순서를 이렇게 잡은 이유는 무료 플랜에서 완주 가능한 쪽을 먼저 확정하기 위해서였다.</p>
+  <div class="body-grow">
+    <table style="font-size:13px">
+      <thead><tr><th style="width:52px">단계</th><th style="width:150px">작업</th><th class="c-make">MAKE</th><th class="c-zap">ZAPIER</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">01</td><td>준비</td><td colspan="2">Apps Script로 폼 생성 · 응답 시트 · 결과 시트(탭 2개) 구성</td></tr>
+        <tr><td class="mono">02</td><td>계정 · 연동</td><td>무료 가입, 약 2분</td><td>가입 시 Pro 체험 14일 자동 적용, 약 2분</td></tr>
+        <tr><td class="mono">03</td><td>트리거</td><td>Watch New Rows — 헤더 범위 <span class="mono">A1:G1</span> 수동 입력</td><td>New Spreadsheet Row — 시트 선택만으로 헤더 인식</td></tr>
+        <tr><td class="mono">04</td><td>분기</td><td>Router 배치 후 <b>필터를 나중에</b> 추가</td><td>Paths 생성 시 조건 입력이 <b>함께 강제</b></td></tr>
+        <tr><td class="mono">05</td><td>액션</td><td colspan="2">경로별 시트 기록 → 알림 메일 발송 (총 4개)</td></tr>
+        <tr><td class="mono">06</td><td>실행</td><td><span class="bad">필터 전 Run once → 양쪽 경로 통과 사고</span><br>필터 추가 후 재실행</td><td>Publish 후 폼 제출 2건으로 자동 실행</td></tr>
+        <tr><td class="mono">07</td><td>검증</td><td colspan="2">결과 시트 확인 중 <span class="bad">열 매핑 밀림을 양쪽에서 발견</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><span class="lbl">과정에서 얻은 것</span>
+    두 도구 모두 <b>돌아가게 만드는 데는 큰 어려움이 없었다.</b> 시간이 걸린 건 구현이 아니라 <b>결과가 맞는지 확인하는 단계</b>였고, 실제로 두 건의 오류가 모두 그 단계에서 드러났다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>구현 과정</span></div>
+</section>
+
+<!-- 09 항목 개요 -->
+<section class="slide">
+  <div class="eyebrow">05 — 비교 항목</div>
+  <h2>7개 항목 · 실측 기준</h2>
+  <p class="sub">요건은 5개 이상. 구현 중 실제로 관찰된 차이만 뽑아 7개가 나왔다. <span style="color:var(--zap)">★</span>는 마찰이나 사고가 발생해 근거가 뚜렷한 항목.</p>
+  <div class="body-grow">
+    <div class="items">
+      <div class="item"><span class="n">1</span><span class="t">워크플로우 표현 구조</span><span class="d">구조 의존</span></div>
+      <div class="item key"><span class="n">4 ★</span><span class="t">실행 로그 확인 방식</span><span class="d">대비 뚜렷</span></div>
+      <div class="item key"><span class="n">2 ★</span><span class="t">조건 분기 구현 방식</span><span class="d">사고 발생</span></div>
+      <div class="item key"><span class="n">5 ★</span><span class="t">트리거 반응 속도</span><span class="d">해석 주의</span></div>
+      <div class="item key"><span class="n">3 ★</span><span class="t">데이터 매핑 방식</span><span class="d">양쪽 다 오류</span></div>
+      <div class="item key"><span class="n">6 ★</span><span class="t">무료 플랜 가용 범위</span><span class="d">결정적</span></div>
+      <div class="item"><span class="n">7</span><span class="t">초기 설정 소요</span><span class="d">차이 없음</span></div>
+      <div class="item"><span class="n">—</span><span class="t" style="color:var(--muted)">실행 실패 대응</span><span class="d">해당 없음</span></div>
+    </div>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>항목 개요</span></div>
+</section>
+
+<!-- 09 항목1 -->
+<section class="slide">
+  <div class="eyebrow">항목 1 — 워크플로우 표현 구조</div>
+  <h2>다이어그램 vs 체크리스트</h2>
+  <div class="body-grow">
+    <table>
+      <thead><tr><th style="width:150px"></th><th class="c-make">MAKE</th><th class="c-zap">ZAPIER</th></tr></thead>
+      <tbody>
+        <tr><td>화면 형태</td><td>2차원 캔버스, 모듈을 자유 배치</td><td>위에서 아래로 흐르는 선형 스텝 리스트</td></tr>
+        <tr><td>전체 조망</td><td>한 화면에서 분기 구조가 그림으로 보임</td><td>스크롤하며 순서대로 확인</td></tr>
+        <tr><td>스텝 번호</td><td>모듈별 고유 번호 (2·4·5·6·7·8)</td><td>실행 순서대로 1~8</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><span class="lbl">해석</span>
+    Make는 워크플로우를 <b>다이어그램</b>으로, Zapier는 <b>체크리스트</b>로 다룬다. 이번 워크플로우는 분기 1개라 두 방식 모두 무리 없었지만, 경로가 3개 이상으로 늘면 Zapier의 세로 리스트는 전체 구조 파악이 어려워질 것으로 보인다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>항목 1</span></div>
+</section>
+
+<!-- 10 항목2 표 -->
+<section class="slide">
+  <div class="eyebrow">항목 2 — 조건 분기 구현 방식</div>
+  <h2>유연함과 안전함의 교환<span class="star">★</span></h2>
+  <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px">
+    <table>
+      <thead><tr><th style="width:150px"></th><th class="c-make">MAKE</th><th class="c-zap">ZAPIER</th></tr></thead>
+      <tbody>
+        <tr><td>구성 요소</td><td>Router(경로) + 필터(조건) 분리</td><td>Paths 하나에 경로와 조건이 통합</td></tr>
+        <tr><td>조건 입력 위치</td><td>경로 연결선의 깔때기 아이콘 클릭</td><td>경로 블록 안 조건 입력란</td></tr>
+        <tr><td>fallback 경로</td><td><b>지원</b> — 조건 없이 모두 통과시키는 예비 경로</td><td>개념 없음</td></tr>
+        <tr><td>조건 누락 시</td><td class="bad">모든 데이터가 통과</td><td>경로 저장 자체가 안 됨</td></tr>
+      </tbody>
+    </table>
+    <div class="shots two" style="flex:1">
+      <figure class="shot m">
+        <div class="frame" data-file="M04_필터_도입상담.png">
+          <img src="img/M04_필터_도입상담.png" alt="Make 필터 도입상담" onerror="this.closest('.shot').classList.add('missing')"></div>
+        <figcaption>M04 · 문의 유형 Equal to 솔루션 도입 상담</figcaption>
+      </figure>
+      <figure class="shot m">
+        <div class="frame" data-file="M05_필터_단순문의.png">
+          <img src="img/M05_필터_단순문의.png" alt="Make 필터 단순문의" onerror="this.closest('.shot').classList.add('missing')"></div>
+        <figcaption>M05 · 문의 유형 Equal to 단순 문의</figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>항목 2</span></div>
+</section>
+
+<!-- 11 항목2 사고 -->
+<section class="slide">
+  <div class="eyebrow">항목 2 — 실측</div>
+  <h2>"조건 누락 시 모두 통과"가 실제로 일어났다</h2>
+  <p class="sub">필터를 걸기 전에 Make에서 <span class="mono">Run once</span>를 실행했고, Router의 <b>양쪽 경로가 모두 통과</b>해 같은 데이터가 두 탭에 기록됐다.</p>
+  <div class="split">
+    <div class="side">
+      <div class="tool n">기록 결과 — 폼 응답 4건</div>
+      <table style="font-size:12.5px">
+        <thead><tr><th style="width:90px">탭</th><th>기록된 행</th></tr></thead>
+        <tbody>
+          <tr><td>도입상담</td><td>003 · <span class="bad">003(중복)</span> · 004</td></tr>
+          <tr><td>일반문의</td><td>002 · <span class="bad">003(오분류)</span> · 005</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;margin-top:14px">
+        <b>테스트003</b> 한 건이 도입상담에 두 번, 일반문의에도 한 번 들어갔다. 문의 유형이 <span class="mono">솔루션 도입 상담</span>이므로 일반문의 탭에는 들어갈 수 없는 건이다.<br><br>
+        Zapier가 처리한 <b>004·005</b>는 각각 맞는 탭에 한 번씩만 기록됐다.
+      </p>
+    </div>
+    <div class="seam"></div>
+    <div class="side">
+      <div class="tool n">증빙</div>
+      <figure class="shot" style="flex:1">
+        <div class="frame" data-file="R02_결과시트_일반문의탭.png">
+          <img src="img/R02_결과시트_일반문의탭.png" alt="일반문의 탭 오분류 기록" onerror="this.closest('.shot').classList.add('missing')"></div>
+        <figcaption>R02 · 일반문의 탭 3행에 도입상담 건이 기록됨</figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="note warn"><span class="lbl">이 사고가 말해주는 것</span>
+    Make의 "조건은 선택 사항" 설계는 <b>fallback 경로를 만들 수 있는 유연함</b>인 동시에 <b>조건을 깜빡하면 조용히 통과시키는 위험</b>이다. Zapier는 이 사고가 구조적으로 불가능하다. 기록을 지우지 않고 남긴다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>항목 2 실측</span></div>
+</section>
+
+<!-- 12 항목3 표 -->
+<section class="slide">
+  <div class="eyebrow">항목 3 — 데이터 매핑 방식</div>
+  <h2>Make에서 더 헤맸다<span class="star">★</span></h2>
+  <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px">
+    <table>
+      <thead><tr><th style="width:150px"></th><th class="c-make">MAKE</th><th class="c-zap">ZAPIER</th></tr></thead>
+      <tbody>
+        <tr><td>필드 표시</td><td><span class="mono">이름 (B)</span> — 열 문자 식별자</td><td>필드명 + <b>실제 응답 샘플값</b></td></tr>
+        <tr><td>시트 구조 파악</td><td>헤더 범위·열 ID 사용 여부를 직접 지정</td><td>시트 선택 시 자동 인식</td></tr>
+        <tr><td>체감 난이도</td><td><b style="color:var(--make)">더 헤맴</b></td><td>상대적으로 수월</td></tr>
+      </tbody>
+    </table>
+    <div class="shots two" style="flex:1">
+      <figure class="shot m">
+        <div class="frame" data-file="M03_데이터매핑_열지정.png">
+          <img src="img/M03_데이터매핑_열지정.png" alt="Make 데이터 매핑" onerror="this.closest('.shot').classList.add('missing')"></div>
+        <figcaption>M03 · 관심솔루션(E)←(F), 문의내용(F)←(G) 어긋남</figcaption>
+      </figure>
+      <figure class="shot z">
+        <div class="frame" data-file="Z05_데이터매핑_테스트.png">
+          <img src="img/Z05_데이터매핑_테스트.png" alt="Zapier 데이터 매핑 테스트" onerror="this.closest('.shot').classList.add('missing')"></div>
+        <figcaption>Z05 · 각 필드에 실제 값이 함께 표시됨</figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>항목 3</span></div>
+</section>
+
+<!-- 13 항목3 해석 -->
+<section class="slide">
+  <div class="eyebrow">항목 3 — 해석</div>
+  <h2>수월했다는 것과 안전했다는 것은 다르다</h2>
+  <div class="split">
+    <div class="side">
+      <div class="tool make">Make에서 왜 밀렸나</div>
+      <p style="font-size:13.5px">
+        결과 시트엔 <span class="mono">문의 유형</span> 열이 없는데 응답 시트엔 있다. 그래서 다섯 번째부터 한 칸씩 어긋난다.<br><br>
+        앞의 네 개가 우연히 <span class="mono">A→A, B→B</span>로 맞아떨어지니 <b>"순서대로 꽂으면 되겠다"</b>고 판단하기 쉽다. Make는 <span class="mono">(F)</span> 같은 열 문자만 보여주므로 눈으로 검증할 방법이 없다.
+      </p>
+    </div>
+    <div class="seam"></div>
+    <div class="side">
+      <div class="tool zap">Zapier에서도 밀렸다</div>
+      <p style="font-size:13.5px">
+        <b>도입상담 탭의 이메일 칸에 <span class="mono">솔루션 도입 상담</span>이 기록됐다.</b> 이메일 주소가 아니라 문의 유형 값이다.<br><br>
+        Z09의 <span class="mono">Data out</span>에도 같은 값이 찍혀 있다. 즉 기록 단계가 아니라 <b>트리거가 응답 시트를 읽는 단계</b>에서 열이 밀렸다.
+      </p>
+      <figure class="shot" style="flex:1;margin-top:12px">
+        <div class="frame" data-file="R01_결과시트_도입상담탭.png">
+          <img src="img/R01_결과시트_도입상담탭.png" alt="도입상담 탭 이메일 칸 오기록" onerror="this.closest('.shot').classList.add('missing')"></div>
+        <figcaption>R01 · 4행 이메일 칸에 문의 유형 값</figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="note warn"><span class="lbl">결론 수정</span>
+    Zapier가 <b>첫 구현을 쉽게</b> 만든 건 맞다. 하지만 <b>매핑 오류를 막아주지는 못했다.</b> 두 도구 모두 열 밀림이 발생했고, 차이는 오류의 발생 여부가 아니라 <b>발견하기까지 걸리는 시간</b>이었다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>항목 3 해석</span></div>
+</section>
+
+<!-- 14 항목4 표 -->
+<section class="slide">
+  <div class="eyebrow">항목 4 — 실행 로그 확인 방식</div>
+  <h2>기호로 압축하기, 문장으로 풀기<span class="star">★</span></h2>
+  <div class="body-grow">
+    <table>
+      <thead><tr><th style="width:150px"></th><th class="c-make">MAKE</th><th class="c-zap">ZAPIER</th></tr></thead>
+      <tbody>
+        <tr><td>표시 위치</td><td>편집 캔버스 위에 겹쳐 표시</td><td>별도 History 페이지</td></tr>
+        <tr><td>실행된 경로</td><td>체크 + 처리 건수 <span class="mono">✓1</span></td><td><span class="mono">This path ran.</span></td></tr>
+        <tr><td>실행 안 된 경로</td><td><span class="mono" style="font-size:15px">⊘0</span> — 기호 + 숫자</td><td><span class="mono">Path did not run as the rule conditions were not met.</span></td></tr>
+        <tr><td>데이터 확인</td><td>버블 클릭 → 팝업</td><td>스텝 클릭 → 우측 패널 고정</td></tr>
+        <tr><td>이력 보존</td><td>시나리오 단위</td><td>계정 단위 통합 히스토리</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><span class="lbl">해석</span>
+    <span class="mono">⊘0</span>은 정보 밀도가 높다. 여러 경로 상태를 한눈에 읽고 편집 화면을 벗어나지 않아도 된다 — 대신 기호의 의미를 알아야 한다. Zapier의 문장 표시는 느리고 페이지를 옮겨야 하지만, 처음 보는 사람도 즉시 이해한다.<br>
+    <b>항목 3과 같은 방향의 차이다. UI 취향이 아니라 "누구를 사용자로 상정했는가"의 문제다.</b></div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>항목 4</span></div>
+</section>
+
+<!-- 15 항목4 Make 증빙 -->
+<section class="slide">
+  <div class="eyebrow">항목 4 — 분기 실행 증빙 · Make</div>
+  <h2>같은 화면에서 양쪽 경로 상태를 읽는다</h2>
+  <p class="sub">한 경로가 실행되면 반대 경로에 <span class="mono">⊘0</span>이 붙는다. 캔버스를 벗어나지 않고 확인된다.</p>
+  <div class="shots two" style="flex:1">
+    <figure class="shot m">
+      <div class="frame" data-file="M06_실행결과_도입상담.png">
+        <img src="img/M06_실행결과_도입상담.png" alt="Make 도입상담 실행" onerror="this.closest('.shot').classList.add('missing')"></div>
+      <figcaption>M06 · 1st 도입상담 ✓1 / 2nd 단순문의 ⊘0</figcaption>
+    </figure>
+    <figure class="shot m">
+      <div class="frame" data-file="M07_실행결과_단순문의.png">
+        <img src="img/M07_실행결과_단순문의.png" alt="Make 단순문의 실행" onerror="this.closest('.shot').classList.add('missing')"></div>
+      <figcaption>M07 · 1st 도입상담 ⊘0 / 2nd 단순문의 ✓1</figcaption>
+    </figure>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>Make 분기 증빙</span></div>
+</section>
+
+<!-- 16 항목4 Zapier 증빙 -->
+<section class="slide">
+  <div class="eyebrow">항목 4 — 분기 실행 증빙 · Zapier</div>
+  <h2>왜 실행되지 않았는지 문장으로 설명한다</h2>
+  <p class="sub">별도 History 페이지에서 실행 건을 열면, 각 경로 아래에 실행 여부와 사유가 적힌다.</p>
+  <div class="shots two" style="flex:1">
+    <figure class="shot z">
+      <div class="frame" data-file="Z09_실행상세_도입상담.png">
+        <img src="img/Z09_실행상세_도입상담.png" alt="Zapier 도입상담 실행 상세" onerror="this.closest('.shot').classList.add('missing')"></div>
+      <figcaption>Z09 · 12:53:31 — 도입상담 ran</figcaption>
+    </figure>
+    <figure class="shot z">
+      <div class="frame" data-file="Z08_실행상세_단순문의.png">
+        <img src="img/Z08_실행상세_단순문의.png" alt="Zapier 단순문의 실행 상세" onerror="this.closest('.shot').classList.add('missing')"></div>
+      <figcaption>Z08 · 12:53:32 — 단순문의 ran</figcaption>
+    </figure>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>Zapier 분기 증빙</span></div>
+</section>
+
+<!-- 17 알림 메일 -->
+<section class="slide">
+  <div class="eyebrow">Action 완결 확인</div>
+  <h2>분기별로 다른 알림 메일이 발송됐다</h2>
+  <p class="sub">시트 기록 다음 단계인 메일 발송까지 실행돼, 경로마다 제목과 본문이 다르게 나갔다.</p>
+  <div class="shots two" style="flex:1">
+    <figure class="shot">
+      <div class="frame" data-file="R03_알림메일_도입상담.png">
+        <img src="img/R03_알림메일_도입상담.png" alt="도입상담 알림 메일" onerror="this.closest('.shot').classList.add('missing')"></div>
+      <figcaption>R03 · [도입상담] 신규 도입 상담 문의 접수</figcaption>
+    </figure>
+    <figure class="shot">
+      <div class="frame" data-file="R04_알림메일_일반문의.png">
+        <img src="img/R04_알림메일_일반문의.png" alt="일반문의 알림 메일" onerror="this.closest('.shot').classList.add('missing')"></div>
+      <figcaption>R04 · [일반문의] 일반 문의 접수</figcaption>
+    </figure>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>알림 메일</span></div>
+</section>
+
+<!-- 18 항목5 -->
+<section class="slide">
+  <div class="eyebrow">항목 5 — 트리거 반응 속도</div>
+  <h2>여기서 결론을 잘못 내리기 쉽다<span class="star">★</span></h2>
+  <div class="body-grow">
+    <table>
+      <thead><tr><th style="width:190px"></th><th class="c-make">MAKE — 무료</th><th class="c-zap">ZAPIER — Pro 체험</th></tr></thead>
+      <tbody>
+        <tr><td>폼 제출 → 시트 기록</td><td>느림</td><td><b>빠름</b></td></tr>
+        <tr><td>원인</td><td>무료 플랜 최소 폴링 간격 15분<br><span class="mono" style="color:var(--muted)">(M01 하단 Every 15 minutes 토글)</span></td><td>상위 플랜의 짧은 폴링 주기</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note warn"><span class="lbl">해석 — 통제되지 않은 변수</span>
+    같은 조건에서 비교한 게 아니다. 폴링 간격은 두 도구 모두 <b>플랜에 종속된 값</b>이다.<br>
+    <b style="font-size:16px">→ Zapier가 빠른 도구인 게 아니라, 이번 구현에서 Zapier가 더 상위 플랜이었다.</b><br>
+    다만 "무료로 쓸 때 어느 쪽이 빠른가"를 묻는다면 Make 무료의 15분 간격은 확정된 제약이다. 속도가 중요하다면 <b>폴링 대신 Webhook</b>이 근본 해법이며, 두 도구 모두 지원한다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>항목 5</span></div>
+</section>
+
+<!-- 19 항목6 -->
+<section class="slide">
+  <div class="eyebrow">항목 6 — 무료 플랜 가용 범위</div>
+  <h2>양으로 막느냐, 기능으로 막느냐<span class="star">★</span></h2>
+  <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px">
+    <table>
+      <thead><tr><th style="width:170px"></th><th class="c-make">MAKE</th><th class="c-zap">ZAPIER</th></tr></thead>
+      <tbody>
+        <tr><td>제한의 성격</td><td><b>양적 제한</b></td><td><b>기능적 제한</b></td></tr>
+        <tr><td>구체적 내용</td><td>월 1,000 크레딧 / 활성 시나리오 2개 / 최소 15분 간격</td><td>단일 스텝만 허용 — 멀티스텝·Paths 불가</td></tr>
+        <tr><td>이번 구현 실측</td><td><b>9 / 1,000 크레딧 사용 (1%)</b></td><td>Pro 체험 없이는 착수 불가</td></tr>
+        <tr><td>분기 워크플로우<br>무료 구현</td><td><b style="color:var(--make)">가능</b></td><td><b style="color:var(--zap)">불가능</b></td></tr>
+      </tbody>
+    </table>
+    <div class="shots two" style="flex:1">
+      <figure class="shot m">
+        <div class="frame" data-file="M08_플랜_크레딧상태.png">
+          <img src="img/M08_플랜_크레딧상태.png" alt="Make 플랜 및 크레딧" onerror="this.closest('.shot').classList.add('missing')"></div>
+        <figcaption>M08 · Free · 991/1,000 남음 · 활성 시나리오 0/2</figcaption>
+      </figure>
+      <figure class="shot z">
+        <div class="frame" data-file="Z00_플랜_Pro체험상태.png">
+          <img src="img/Z00_플랜_Pro체험상태.png" alt="Zapier Pro 체험 상태" onerror="this.closest('.shot').classList.add('missing')"></div>
+        <figcaption>Z00 · Pro 체험 14일 · 만료 시 멀티스텝 잠김</figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>항목 6</span></div>
+</section>
+
+<!-- 20 항목7 -->
+<section class="slide">
+  <div class="eyebrow">항목 7 — 초기 설정 소요</div>
+  <h2>차이 없음. 그것도 결과다</h2>
+  <div class="body-grow">
+    <table>
+      <thead><tr><th style="width:280px"></th><th class="c-make">MAKE</th><th class="c-zap">ZAPIER</th></tr></thead>
+      <tbody>
+        <tr><td>계정 생성 ~ Google 연동 ~ 첫 모듈 배치</td><td>약 2분</td><td>약 2분</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:20px">
+      <table>
+        <thead><tr><th>부록 — 실행 실패 대응</th></tr></thead>
+        <tbody><tr><td style="font-weight:400;color:var(--ink2)">
+          구현 과정에서 <b>실행 실패(error)는 양쪽 모두 발생하지 않았다.</b> 따라서 에러 핸들링·재실행 편의성은 실측 근거가 없어 비교 항목에서 제외했다.<br>
+          다만 <b>실행은 성공했으나 결과가 잘못된 논리 오류는 양쪽 모두 발생</b>했다(항목 2·3). 자동화에서 위험한 건 멈추는 오류가 아니라 <b>조용히 잘못된 값을 남기는 오류</b>라는 게 이번 구현의 실감이다.
+        </td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="note"><span class="lbl">기록 이유</span>
+    "진입 장벽"은 두 도구를 가르는 축이 아니다. 실제 차이는 <b>연동 이후 첫 워크플로우를 완성하기까지의 과정</b>에서 발생한다 — 즉 항목 3과 4다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>항목 7</span></div>
+</section>
+
+<!-- 21 종합표 -->
+<section class="slide">
+  <div class="eyebrow">05 — 종합</div>
+  <h2>비교 항목 7개 요약</h2>
+  <div class="body-grow">
+    <table style="font-size:13px">
+      <thead><tr><th style="width:180px">비교 항목</th><th class="c-make">MAKE</th><th class="c-zap">ZAPIER</th><th style="width:180px">우위</th></tr></thead>
+      <tbody>
+        <tr><td>워크플로우 표현 구조</td><td>2차원 캔버스</td><td>선형 스텝 리스트</td><td><span class="win-n">구조 복잡도에 따라</span></td></tr>
+        <tr><td>조건 분기 구현</td><td>Router+필터, fallback 지원</td><td>Paths 통합, 조건 강제</td><td><span class="win-z">ZAPIER</span> <span class="win-n">(안전성)</span></td></tr>
+        <tr><td>데이터 매핑</td><td>열 문자 식별자</td><td>샘플값 동반</td><td><span class="win-z">ZAPIER</span> <span class="win-n">(첫 구현 한정)</span></td></tr>
+        <tr><td>실행 로그 확인</td><td>기호 ⊘0, 캔버스 내</td><td>문장 설명, 별도 페이지</td><td><span class="win-z">ZAPIER</span> <span class="win-n">(초심자 기준)</span></td></tr>
+        <tr><td>트리거 반응 속도</td><td>느림 (무료 15분)</td><td>빠름 (Pro 체험)</td><td><span class="win-n">플랜 차이, 도구 차이 아님</span></td></tr>
+        <tr><td>무료 플랜 가용 범위</td><td>분기 구현 가능 · 9/1,000</td><td>분기 구현 불가</td><td><span class="win-m">MAKE</span></td></tr>
+        <tr><td>초기 설정 소요</td><td>약 2분</td><td>약 2분</td><td><span class="win-n">차이 없음</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>종합 비교표</span></div>
+</section>
+
+<!-- 22 장단점 정리 -->
+<section class="slide">
+  <div class="eyebrow">05 — 종합</div>
+  <h2>도구별 장단점</h2>
+  <div class="split" style="flex:1;min-height:0">
+    <div class="side">
+      <div class="tool make">MAKE</div>
+      <table style="font-size:12.5px">
+        <thead><tr><th style="width:44px">장점</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono">+</td><td>무료 플랜에서 분기 워크플로우 완주 가능 (9/1,000 사용)</td></tr>
+          <tr><td class="mono">+</td><td>2차원 캔버스로 분기 구조를 한눈에 조망</td></tr>
+          <tr><td class="mono">+</td><td>실행 결과를 편집 화면에서 바로 확인</td></tr>
+          <tr><td class="mono">+</td><td>fallback 경로 지원 — 예외 처리 설계 여지</td></tr>
+        </tbody>
+      </table>
+      <table style="font-size:12.5px;margin-top:12px">
+        <thead><tr><th style="width:44px">단점</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono" style="color:var(--zap)">−</td><td>필드가 열 문자로만 표시돼 값 검증이 어려움</td></tr>
+          <tr><td class="mono" style="color:var(--zap)">−</td><td>헤더 범위·열 ID 사용 여부를 직접 지정해야 함</td></tr>
+          <tr><td class="mono" style="color:var(--zap)">−</td><td><b>조건 누락 시 경고 없이 전량 통과</b></td></tr>
+          <tr><td class="mono" style="color:var(--zap)">−</td><td>무료 폴링 최소 15분</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="seam"></div>
+    <div class="side">
+      <div class="tool zap">ZAPIER</div>
+      <table style="font-size:12.5px">
+        <thead><tr><th style="width:44px">장점</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono">+</td><td>필드 선택 시 실제 응답값을 함께 표시</td></tr>
+          <tr><td class="mono">+</td><td>미실행 사유를 자연어 문장으로 설명</td></tr>
+          <tr><td class="mono">+</td><td>조건 입력이 강제되어 누락이 구조적으로 불가</td></tr>
+          <tr><td class="mono">+</td><td>계정 단위 통합 실행 이력</td></tr>
+        </tbody>
+      </table>
+      <table style="font-size:12.5px;margin-top:12px">
+        <thead><tr><th style="width:44px">단점</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono" style="color:var(--zap)">−</td><td><b>무료 플랜에서 이번 워크플로우 구현 불가</b></td></tr>
+          <tr><td class="mono" style="color:var(--zap)">−</td><td>체험 만료 시 분기 워크플로우가 잠김</td></tr>
+          <tr><td class="mono" style="color:var(--zap)">−</td><td>선형 리스트라 분기가 늘면 조망성 저하</td></tr>
+          <tr><td class="mono" style="color:var(--zap)">−</td><td>실행 로그가 별도 페이지 — 편집 중 이동 필요</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="note"><span class="lbl">공통 단점</span>
+    <b>두 도구 모두 열 매핑 오류를 사전에 막아주지 못했다.</b> 실행은 성공으로 표시되지만 값이 잘못 들어간 상태를 도구가 알려주지 않는다는 점은 양쪽 공통이다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>장단점 정리</span></div>
+</section>
+
+<!-- 23 결론 축 -->
+<section class="slide">
+  <div class="eyebrow">06 — 결론</div>
+  <h2 style="margin-bottom:22px">반복해서 확인된 하나의 축</h2>
+  <p class="thesis"><span class="z">Zapier는 첫 성공까지의 거리를 줄이고,</span><br><span class="m">Make는 열 번째 워크플로우의 효율을 높인다.</span></p>
+  <div class="split" style="flex:none;margin-top:26px">
+    <div class="side">
+      <div class="tool zap">사용자를 모른다고 가정</div>
+      <p style="font-size:13.5px">샘플값을 보여주고<span class="mono" style="color:var(--muted)">(3)</span>, 미실행 사유를 문장으로 설명하고<span class="mono" style="color:var(--muted)">(4)</span>, 조건 입력을 강제한다<span class="mono" style="color:var(--muted)">(2)</span>.</p>
+    </div>
+    <div class="seam"></div>
+    <div class="side">
+      <div class="tool make">사용자가 안다고 가정</div>
+      <p style="font-size:13.5px">열 문자만 노출하고<span class="mono" style="color:var(--muted)">(3)</span>, 기호로 압축해 표시하고<span class="mono" style="color:var(--muted)">(4)</span>, 조건을 선택 사항으로 둔다<span class="mono" style="color:var(--muted)">(2)</span>.</p>
+    </div>
+  </div>
+  <div class="note" style="margin-top:20px">
+    어느 쪽이 우월한 게 아니라, <b>학습 비용을 앞에 두느냐 뒤에 두느냐</b>의 차이다.<br>
+    다만 이번 구현이 덧붙인 단서 — <b>안내가 친절하다고 결과가 정확해지지는 않았다.</b></div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>결론</span></div>
+</section>
+
+<!-- 23 상황별 -->
+<section class="slide">
+  <div class="eyebrow">06 — 결론</div>
+  <h2>상황별 선택 기준</h2>
+  <div class="body-grow">
+    <table>
+      <thead><tr><th style="width:320px">상황</th><th style="width:130px">선택</th><th>이유</th></tr></thead>
+      <tbody>
+        <tr><td>자동화를 처음 만들어 본다</td><td><span class="win-z">ZAPIER</span></td><td>첫 성공 확률이 높음 <span class="mono" style="color:var(--muted)">(항목 3·4)</span></td></tr>
+        <tr><td>운영자가 여러 명이라 실수 여지를 줄여야 한다</td><td><span class="win-z">ZAPIER</span></td><td>조건 누락이 구조적으로 불가능 <span class="mono" style="color:var(--muted)">(항목 2)</span></td></tr>
+        <tr><td>예산 없이 분기 워크플로우가 필요하다</td><td><span class="win-m">MAKE</span></td><td>무료로 분기 구현 가능 <span class="mono" style="color:var(--muted)">(항목 6)</span></td></tr>
+        <tr><td>분기·병합이 많은 복잡한 흐름</td><td><span class="win-m">MAKE</span></td><td>2차원 캔버스의 조망성 + fallback <span class="mono" style="color:var(--muted)">(항목 1·2)</span></td></tr>
+        <tr><td>실행 횟수가 매우 많다</td><td><span class="win-m">MAKE</span></td><td>Zapier는 실행 단위 과금 부담이 큼</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>선택 기준</span></div>
+</section>
+
+<!-- 24 최종 선택 -->
+<section class="slide">
+  <div class="eyebrow">06 — 결론</div>
+  <h2>이번 과제의 최종 선택 — <span style="color:var(--make)">Make</span></h2>
+  <p class="sub">프로젝트 2는 Make 단독으로 진행한다. 근거는 두 가지다.</p>
+  <div class="body-grow">
+    <div class="items one" style="gap:0">
+      <div class="item" style="padding:15px 0"><span class="n">01</span><span class="t"><b>비용 지속성</b> — Zapier Pro 체험이 <span class="mono">2026-08-17</span>에 만료되면 분기 워크플로우를 유지할 수 없다. 제출 이후에도 실제로 돌아가는 자동화를 남기려면 Make여야 한다. 크레딧도 1% 사용에 그쳐 여유가 충분하다.</span></div>
+      <div class="item" style="padding:15px 0"><span class="n">02</span><span class="t"><b>확장 여지</b> — 프로젝트 2(NUON 블로그 초안 자동화)는 단계가 더 많고 조건도 늘어난다. 항목 1에서 확인한 캔버스형 구조가 이 규모에서 유리하다.</span></div>
+    </div>
+  </div>
+  <div class="note"><span class="lbl">판단</span>
+    <b style="font-size:17px">도구는 목적이 결정한다.</b><br>
+    첫 구현의 편의만 보면 Zapier가 나았다. 하지만 "체험 만료 후에도 살아 있어야 한다"는 조건이 붙는 순간 답이 바뀌었다. 대신 Make를 쓴다면 <b>조건 누락 점검을 절차로 만들어야 한다</b>는 것도 이번에 배웠다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>최종 선택</span></div>
+</section>
+
+<!-- 25 제약사항 -->
+<section class="slide">
+  <div class="eyebrow">07 — 제약사항</div>
+  <h2>유료 기능 사용 근거와 무료 대안</h2>
+  <p class="sub"><b>사용한 유료 기능</b> — Zapier Paths 및 멀티스텝 Zap · Professional 14일 체험 <span class="mono">2026-08-03 ~ 08-17</span><br>
+  <b>불가피했던 이유</b> — 과제 요건(Action 2개 + 분기 1개)이 Zapier 무료 플랜의 경계 밖에 있다. 기능을 축소해 우회할 방법이 없었다.</p>
+  <div class="body-grow">
+    <table>
+      <thead><tr><th style="width:170px">무료 대안</th><th>내용</th><th style="width:280px">한계</th></tr></thead>
+      <tbody>
+        <tr><td>A. Make 단독</td><td>Make 무료 플랜은 Router·필터를 모두 제공</td><td>도구 비교라는 프로젝트 1의 목적을 달성 못 함</td></tr>
+        <tr><td>B. Zapier 분기 우회</td><td>단일 스텝 Zap 2개 + 시트 수식으로 사전 분류</td><td>분기 판단이 Zapier 밖에서 일어나 요건 미충족</td></tr>
+        <tr><td>C. n8n 자가호스팅</td><td>Docker 로컬 구동 시 실행 무제한, 분기 제한 없음</td><td>초기 세팅 비용 발생 (비교 축 추가 장점은 있음)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><span class="lbl">판단</span>
+    프로젝트 1의 목적이 도구 간 비교이므로 A는 선택 불가, B는 요건 미충족, C는 기간 내 세팅 비용을 감안해 미채택.<br>
+    → <b>체험 기간 내에 Zapier 구현과 증빙 캡처를 모두 완료</b>하고, 만료 후에도 유지되는 자동화는 Make 쪽에 남긴다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>제약사항</span></div>
+</section>
+
+<!-- 26 증빙 목록 -->
+<section class="slide">
+  <div class="eyebrow">08 — 증빙</div>
+  <h2>캡처 23장</h2>
+  <div class="body-grow" style="justify-content:flex-start">
+    <div class="split" style="flex:1;min-height:0">
+      <div class="side">
+        <div class="tool make">MAKE · 9장</div>
+        <table style="font-size:12px">
+          <tbody>
+            <tr><td class="mono" style="width:46px">M00</td><td>트리거 설정</td></tr>
+            <tr><td class="mono">M01</td><td>시나리오 전체 캔버스</td></tr>
+            <tr><td class="mono">M02</td><td>시트 기록 모듈 설정</td></tr>
+            <tr><td class="mono">M03</td><td>데이터 매핑 · 열 지정</td></tr>
+            <tr><td class="mono">M04·05</td><td>필터 조건 2종</td></tr>
+            <tr><td class="mono">M06·07</td><td>분기 실행 결과 2종</td></tr>
+            <tr><td class="mono">M08</td><td>플랜 · 크레딧 상태</td></tr>
+          </tbody>
+        </table>
+        <div class="tool n" style="margin-top:16px">결과 · 4장</div>
+        <table style="font-size:12px">
+          <tbody>
+            <tr><td class="mono" style="width:46px">R01·02</td><td>결과 시트 탭 2종</td></tr>
+            <tr><td class="mono">R03·04</td><td>알림 메일 2종</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="seam"></div>
+      <div class="side">
+        <div class="tool zap">ZAPIER · 10장</div>
+        <table style="font-size:12px">
+          <tbody>
+            <tr><td class="mono" style="width:46px">Z00</td><td>플랜 · Pro 체험 상태</td></tr>
+            <tr><td class="mono">Z01</td><td>초기 화면 · 빈 Zap</td></tr>
+            <tr><td class="mono">Z02</td><td>트리거 설정</td></tr>
+            <tr><td class="mono">Z03</td><td>Paths 경로 생성</td></tr>
+            <tr><td class="mono">Z04</td><td>Paths 조건 설정</td></tr>
+            <tr><td class="mono">Z05</td><td>데이터 매핑 · 테스트</td></tr>
+            <tr><td class="mono">Z06</td><td>Zap 전체 구성</td></tr>
+            <tr><td class="mono">Z07</td><td>실행 이력 목록</td></tr>
+            <tr><td class="mono">Z08·09</td><td>실행 상세 2종</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="note"><span class="lbl">이미지 넣는 법</span>
+    이 HTML 파일과 같은 위치에 <span class="mono">img</span> 폴더를 두면 슬라이드에 자동으로 들어간다. 파일이 없으면 점선 자리에 파일명이 표시된다.</div>
+  <div class="rail"><span class="pg"></span><span class="track"><span class="fill"></span></span><span>증빙 목록</span></div>
+</section>
+
+</div>
+
+<div class="nav">
+  <button id="prev" aria-label="이전 슬라이드">←</button>
+  <button id="next" aria-label="다음 슬라이드">→</button>
+</div>
+<div class="hint">← → 이동 · F 전체화면</div>
+
+<script>
+(function(){
+  var vp=document.getElementById('viewport');
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var i=0,n=slides.length;
+  function fit(){var s=Math.min(window.innerWidth/1280,window.innerHeight/720);vp.style.transform='scale('+s+')';}
+  window.addEventListener('resize',fit);fit();
+  function show(k){
+    i=Math.max(0,Math.min(n-1,k));
+    slides.forEach(function(s,j){s.classList.toggle('on',j===i);});
+    var cur=slides[i],pg=cur.querySelector('.pg'),fl=cur.querySelector('.fill');
+    if(pg)pg.textContent=String(i+1).padStart(2,'0')+' / '+String(n).padStart(2,'0');
+    if(fl)fl.style.width=((i+1)/n*100)+'%';
+  }
+  show(0);
+  document.getElementById('prev').onclick=function(e){e.stopPropagation();show(i-1)};
+  document.getElementById('next').onclick=function(e){e.stopPropagation();show(i+1)};
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();show(i+1)}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();show(i-1)}
+    else if(e.key==='Home'){show(0)}else if(e.key==='End'){show(n-1)}
+    else if(e.key==='f'||e.key==='F'){
+      if(document.fullscreenElement)document.exitFullscreen();
+      else document.documentElement.requestFullscreen();}
+  });
+  document.body.addEventListener('click',function(e){
+    if(e.target.closest('.nav'))return;
+    show(e.clientX<window.innerWidth/2?i-1:i+1);
+  });
+})();
+</script>
